@@ -1,0 +1,180 @@
+import argparse
+import csv
+import time
+from pathlib import Path
+
+import numpy as np
+
+from GKM import GKM
+from LKM.FLK import FLK
+from FeiPub import Gfuns, IFuns, Mfuns
+
+
+def parse_c_values(text):
+    if ":" in text:
+        parts = [int(p) for p in text.split(":")]
+        if len(parts) not in (2, 3):
+            raise argparse.ArgumentTypeError("range syntax is start:stop[:step]")
+        start, stop = parts[0], parts[1]
+        step = parts[2] if len(parts) == 3 else 1
+        if step == 0:
+            raise argparse.ArgumentTypeError("step cannot be zero")
+        return list(range(start, stop + (1 if step > 0 else -1), step))
+    return [int(p.strip()) for p in text.split(",") if p.strip()]
+
+
+def load_dataset(data_dir, name, knn):
+    path = Path(data_dir) / f"{name}.mat"
+    if name == "D1":
+        X, y_true, NN, NND, knn_time = IFuns.load_toy(str(path))
+        return X, y_true.astype(np.int32), NN, NND, float(knn_time)
+
+    X, y_true, N, _, c_true = IFuns.loadmat(str(path))
+    t0 = time.perf_counter()
+    NN, NND = Gfuns.knn_nn(X, min(knn, N - 1), squared=True)
+    return X, y_true.astype(np.int32), NN, NND, time.perf_counter() - t0
+
+
+def run_once(NN, NND, y_true, c, cd_iter):
+    total_t0 = time.perf_counter()
+    t0 = time.perf_counter()
+    obj = GKM(
+        NN=NN.astype(np.int32),
+        NND=NND.astype(np.float64),
+        c_true=int(c),
+        debug=0,
+    )
+    obj.opt()
+    gkm_elapsed = time.perf_counter() - t0
+    y_pred = obj.y_pred.astype(np.int32)
+
+    if cd_iter > 0:
+        init_y = [np.asarray(IFuns.replace_with_continuous(y_pred), dtype=np.int32)]
+        mod = FLK(
+            NN=NN.astype(np.int32),
+            NND=NND.astype(np.float64),
+            max_d=-1,
+            c_true=int(c),
+            debug=False,
+        )
+        mod.opt(ITER=cd_iter, init_Y=init_y)
+        y_pred = mod.Y[0].astype(np.int32)
+
+    return {
+        "c": int(c),
+        "n_clusters": int(len(np.unique(y_pred))),
+        "gkm_loss": float(obj.loss),
+        "connected": bool(obj.connected),
+        "cd_iter": int(cd_iter),
+        "gkm_elapsed_sec": gkm_elapsed,
+        "total_elapsed_sec": time.perf_counter() - total_t0,
+        "acc": float(Mfuns.accuracy(y_true.copy(), y_pred)),
+        "nmi": float(Mfuns.nmi(y_true.copy(), y_pred)),
+        "purity": float(Mfuns.purity(y_true.copy(), y_pred)),
+        "ari": float(Mfuns.ari(y_true.copy(), y_pred)),
+    }
+
+
+def write_csv(rows, path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def write_svg(rows, path, title):
+    xs = [r["c"] for r in rows]
+    ys = [r["gkm_loss"] for r in rows]
+    w, h = 880, 520
+    ml, mr, mt, mb = 82, 30, 52, 70
+    pw, ph = w - ml - mr, h - mt - mb
+    xmin, xmax = min(xs), max(xs)
+    ymin, ymax = min(ys), max(ys)
+    if xmin == xmax:
+        xmin -= 1
+        xmax += 1
+    if ymin == ymax:
+        ymin -= 1
+        ymax += 1
+
+    def sx(x):
+        return ml + (x - xmin) / (xmax - xmin) * pw
+
+    def sy(y):
+        return mt + (ymax - y) / (ymax - ymin) * ph
+
+    points = " ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in zip(xs, ys))
+    circles = "\n".join(
+        f'<circle cx="{sx(x):.1f}" cy="{sy(y):.1f}" r="4.5" fill="#2563eb" />'
+        for x, y in zip(xs, ys)
+    )
+    x_ticks = np.linspace(xmin, xmax, min(8, len(set(xs))))
+    y_ticks = np.linspace(ymin, ymax, 6)
+    tick_svg = []
+    for x in x_ticks:
+        px = sx(float(x))
+        tick_svg.append(f'<line x1="{px:.1f}" y1="{mt + ph}" x2="{px:.1f}" y2="{mt + ph + 6}" stroke="#475569" />')
+        tick_svg.append(f'<text x="{px:.1f}" y="{mt + ph + 25}" text-anchor="middle">{x:.0f}</text>')
+    for y in y_ticks:
+        py = sy(float(y))
+        tick_svg.append(f'<line x1="{ml - 6}" y1="{py:.1f}" x2="{ml}" y2="{py:.1f}" stroke="#475569" />')
+        tick_svg.append(f'<text x="{ml - 10}" y="{py + 4:.1f}" text-anchor="end">{y:.3g}</text>')
+        tick_svg.append(f'<line x1="{ml}" y1="{py:.1f}" x2="{ml + pw}" y2="{py:.1f}" stroke="#e2e8f0" />')
+
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">
+<rect width="100%" height="100%" fill="white" />
+<style>
+text {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; font-size: 13px; }}
+.title {{ font-size: 20px; font-weight: 650; }}
+.label {{ font-size: 14px; font-weight: 600; }}
+</style>
+<text x="{w / 2}" y="30" text-anchor="middle" class="title">{title}</text>
+{"".join(tick_svg)}
+<line x1="{ml}" y1="{mt}" x2="{ml}" y2="{mt + ph}" stroke="#0f172a" />
+<line x1="{ml}" y1="{mt + ph}" x2="{ml + pw}" y2="{mt + ph}" stroke="#0f172a" />
+<polyline points="{points}" fill="none" stroke="#2563eb" stroke-width="2.5" />
+{circles}
+<text x="{ml + pw / 2}" y="{h - 22}" text-anchor="middle" class="label">number of clusters c</text>
+<text x="22" y="{mt + ph / 2}" text-anchor="middle" transform="rotate(-90 22 {mt + ph / 2})" class="label">GLKM objective</text>
+</svg>
+'''
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(svg)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Sweep GLKM over cluster counts and save an elbow curve.")
+    parser.add_argument("--dataset", default="Gisette", help="dataset name under --data-dir, without .mat")
+    parser.add_argument("--data-dir", default="./dataset")
+    parser.add_argument("--knn", type=int, default=80, help="KNN graph size for datasets without precomputed NN/NND")
+    parser.add_argument("--c-values", required=True, type=parse_c_values, help="comma list or start:stop[:step], e.g. 2:20 or 10,20,30")
+    parser.add_argument("--cd-iter", type=int, default=0, help="optional FLK coordinate-descent iterations after GLKM")
+    parser.add_argument("--out-dir", default="results/elbow")
+    args = parser.parse_args()
+
+    X, y_true, NN, NND, knn_time = load_dataset(args.data_dir, args.dataset, args.knn)
+    rows = []
+    for c in args.c_values:
+        print(f"running c={c} ...", flush=True)
+        row = run_once(NN, NND, y_true, c, args.cd_iter)
+        rows.append(row)
+        print(
+            f"c={row['c']} loss={row['gkm_loss']:.6g} "
+            f"nmi={row['nmi']:.3f} acc={row['acc']:.3f} "
+            f"time={row['total_elapsed_sec']:.2f}s",
+            flush=True,
+        )
+
+    out_dir = Path(args.out_dir) / args.dataset
+    csv_path = out_dir / "sweep_c.csv"
+    svg_path = out_dir / "elbow.svg"
+    write_csv(rows, csv_path)
+    write_svg(rows, svg_path, f"{args.dataset}: GLKM elbow curve")
+    print(f"KNN time: {knn_time:.2f}s")
+    print(f"Wrote {csv_path}")
+    print(f"Wrote {svg_path}")
+
+
+if __name__ == "__main__":
+    main()
