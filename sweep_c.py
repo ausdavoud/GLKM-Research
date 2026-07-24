@@ -1,5 +1,6 @@
 import argparse
 import csv
+import html
 import time
 from pathlib import Path
 
@@ -21,6 +22,34 @@ def parse_c_values(text):
             raise argparse.ArgumentTypeError("step cannot be zero")
         return list(range(start, stop + (1 if step > 0 else -1), step))
     return [int(p.strip()) for p in text.split(",") if p.strip()]
+
+
+def validate_c_values(values, n_samples):
+    values = sorted(set(values))
+    if not values:
+        raise ValueError("at least one cluster count is required")
+    if values[0] < 1 or values[-1] > n_samples:
+        raise ValueError(f"cluster counts must be between 1 and {n_samples}")
+    return values
+
+
+def estimate_elbow(rows):
+    points = sorted({int(row["c"]): float(row["gkm_loss"]) for row in rows}.items())
+    if len(points) < 3:
+        return None
+
+    xy = np.asarray(points, dtype=np.float64)
+    spans = np.ptp(xy, axis=0)
+    if np.any(spans == 0):
+        return None
+    xy = (xy - xy.min(axis=0)) / spans
+
+    chord = xy[-1] - xy[0]
+    offsets = xy - xy[0]
+    distances = np.abs(chord[0] * offsets[:, 1] - chord[1] * offsets[:, 0]) / np.linalg.norm(chord)
+    distances[[0, -1]] = -1
+    # ponytail: chord distance is a single-knee heuristic; use Kneedle if noisy curves become common.
+    return points[int(np.argmax(distances))][0]
 
 
 def load_dataset(data_dir, name, knn):
@@ -83,7 +112,7 @@ def write_csv(rows, path):
         writer.writerows(rows)
 
 
-def write_svg(rows, path, title):
+def write_svg(rows, path, title, estimated_k=None):
     xs = [r["c"] for r in rows]
     ys = [r["gkm_loss"] for r in rows]
     w, h = 880, 520
@@ -122,6 +151,15 @@ def write_svg(rows, path, title):
         tick_svg.append(f'<text x="{ml - 10}" y="{py + 4:.1f}" text-anchor="end">{y:.3g}</text>')
         tick_svg.append(f'<line x1="{ml}" y1="{py:.1f}" x2="{ml + pw}" y2="{py:.1f}" stroke="#e2e8f0" />')
 
+    elbow_svg = ""
+    if estimated_k is not None:
+        elbow_x = sx(estimated_k)
+        elbow_svg = (
+            f'<line x1="{elbow_x:.1f}" y1="{mt}" x2="{elbow_x:.1f}" y2="{mt + ph}" '
+            'stroke="#dc2626" stroke-width="2" stroke-dasharray="7 6" />'
+            f'<text x="{elbow_x + 8:.1f}" y="{mt + 18}" fill="#dc2626">estimated k = {estimated_k}</text>'
+        )
+
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">
 <rect width="100%" height="100%" fill="white" />
 <style>
@@ -129,12 +167,13 @@ text {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; 
 .title {{ font-size: 20px; font-weight: 650; }}
 .label {{ font-size: 14px; font-weight: 600; }}
 </style>
-<text x="{w / 2}" y="30" text-anchor="middle" class="title">{title}</text>
+<text x="{w / 2}" y="30" text-anchor="middle" class="title">{html.escape(title)}</text>
 {"".join(tick_svg)}
 <line x1="{ml}" y1="{mt}" x2="{ml}" y2="{mt + ph}" stroke="#0f172a" />
 <line x1="{ml}" y1="{mt + ph}" x2="{ml + pw}" y2="{mt + ph}" stroke="#0f172a" />
 <polyline points="{points}" fill="none" stroke="#2563eb" stroke-width="2.5" />
 {circles}
+{elbow_svg}
 <text x="{ml + pw / 2}" y="{h - 22}" text-anchor="middle" class="label">number of clusters c</text>
 <text x="22" y="{mt + ph / 2}" text-anchor="middle" transform="rotate(-90 22 {mt + ph / 2})" class="label">GLKM objective</text>
 </svg>
@@ -154,8 +193,13 @@ def main():
     args = parser.parse_args()
 
     X, y_true, NN, NND, knn_time = load_dataset(args.data_dir, args.dataset, args.knn)
+    try:
+        c_values = validate_c_values(args.c_values, len(X))
+    except ValueError as exc:
+        parser.error(str(exc))
+
     rows = []
-    for c in args.c_values:
+    for c in c_values:
         print(f"running c={c} ...", flush=True)
         row = run_once(NN, NND, y_true, c, args.cd_iter)
         rows.append(row)
@@ -169,11 +213,16 @@ def main():
     out_dir = Path(args.out_dir) / args.dataset
     csv_path = out_dir / "sweep_c.csv"
     svg_path = out_dir / "elbow.svg"
+    estimate_path = out_dir / "estimated_k.txt"
+    estimated_k = estimate_elbow(rows)
     write_csv(rows, csv_path)
-    write_svg(rows, svg_path, f"{args.dataset}: GLKM elbow curve")
+    write_svg(rows, svg_path, f"{args.dataset}: GLKM elbow curve", estimated_k)
+    estimate_path.write_text("unavailable\n" if estimated_k is None else f"{estimated_k}\n")
     print(f"KNN time: {knn_time:.2f}s")
+    print(f"Estimated k: {estimated_k if estimated_k is not None else 'unavailable'}")
     print(f"Wrote {csv_path}")
     print(f"Wrote {svg_path}")
+    print(f"Wrote {estimate_path}")
 
 
 if __name__ == "__main__":
