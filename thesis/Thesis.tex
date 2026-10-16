@@ -1,0 +1,40 @@
+% !TeX program = xelatex
+%        اگر قصد نوشتن پروژه کارشناسی را دارید، در خط زیر به جای msc، کلمه bsc و اگر قصد نوشتن رساله دکتری
+%        را دارید، کلمه phd را قرار دهید. کلیه تنظیمات لازم، به طور خودکار، اعمال می‌شود.
+
+\documentclass[oneside,openany,bsc]{Isfahan_thesis}
+%       فایل commands.tex را حتماً به دقت مطالعه کنید؛ چون دستورات مربوط به فراخوانی بسته زی‌پرشین 
+%       و دیگر بسته‌ها و ... در این فایل قرار دارد و بهتر است که با نحوه استفاده از آنها آشنا شوید.
+\input{commands}
+\begin{document}
+\input{God}
+%\pagebreak
+\input{fa_title}
+\baselineskip=.8cm
+\pagenumbering{harfi}
+\tableofcontents
+\listoffigures
+\listoftables
+
+\include{Chapters/Introduction}
+
+\pagenumbering{arabic}
+
+\include{Chapters/chapter1}
+\include{Chapters/chapter2}
+\include{Chapters/chapter3}
+\include{Chapters/chapter4}
+\include{Chapters/chapter5}
+
+
+%
+%\phantomsection\addcontentsline{toc}{chapter}{منابع و مآخذ}
+%\nocite{*}
+%
+%\small
+%\bibliographystyle{IEEEtran}
+%%\bibliographystyle{chicago-fa}  %Similar to the apacite style
+%\bibliography{References.bib} % Your BibTeX file
+\include{references}
+
+\end{document}

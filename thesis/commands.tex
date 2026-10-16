@@ -1,0 +1,279 @@
+% در این فایل، دستورها و تنظیمات مورد نیاز، آورده شده است.
+%-------------------------------------------------------------------------------------------------------------------
+
+% در ورژن جدید زی‌پرشین برای تایپ متن‌های ریاضی، این سه بسته، حتماً باید فراخوانی شود
+\usepackage{amsthm,amssymb,amsmath,mathrsfs,graphicx}
+\usepackage{array}
+\usepackage{booktabs,tabularx}
+\usepackage[all]{xy}
+% بسته‌ای برای تنطیم حاشیه‌های بالا، پایین، چپ و راست صفحه
+\usepackage[top=40mm, bottom=25mm, left=25mm, right=35mm]{geometry}
+% بسته‌‌ای برای ظاهر شدن شکل‌ها و تصاویر متن
+\usepackage{graphicx,caption,subcaption}
+\usepackage{adjustbox}
+\usepackage{comment}
+\usepackage{fancyhdr}
+\usepackage{fontspec}
+\usepackage{framed}
+\usepackage{lastpage}
+\usepackage{float}
+\usepackage[table]{xcolor}
+\usepackage{colortbl}
+% بسته‌ و دستوراتی برای ایجاد لینک‌های رنگی با امکان جهش
+\usepackage[pagebackref=false,colorlinks,linkcolor=blue,citecolor=magenta]{hyperref}
+\hypersetup{urlcolor=blue}
+
+\usepackage[nottoc]{tocbibind}
+\usepackage{bidipoem}
+% بسته‌ای برای رسم کادر
+% بسته‌‌ای برای چاپ شدن خودکار تعداد صفحات در صفحه «معرفی پایان‌نامه»
+
+% چنانچه قصد پرینت گرفتن نوشته خود را دارید، خط بالا را غیرفعال و  از دستور زیر استفاده کنید چون در صورت استفاده از دستور زیر‌‌،
+% لینک‌ها به رنگ سیاه ظاهر خواهند شد که برای پرینت گرفتن، مناسب‌تر است
+%\usepackage[pagebackref=false]{hyperref}
+% بسته‌ لازم برای تنظیم سربرگ‌ها
+% بسته‌ای برای ظاهر شدن «مراجع» و «نمایه» در فهرست مطالب
+
+% دستورات مربوط به ایجاد نمایه
+\usepackage{makeidx}
+\makeindex
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+% فراخوانی بسته زی‌پرشین و تعریف قلم فارسی و انگلیسی
+\usepackage{xepersian}
+\settextfont[Path=Fonts/,Scale=1]{XB Niloofar.ttf}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+% چنانچه می‌خواهید اعداد در فرمول‌ها، انگلیسی باشد، خط زیر را غیرفعال کنید
+%\setdigitfont[Path=Fonts/,Scale=1]{Persian Modern.ttf}
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+% تعریف قلم‌های فارسی و انگلیسی اضافی برای استفاده در بعضی از قسمت‌های متن
+\defpersianfont\nastaliq[Path=Fonts/,Scale=2]{IranNastaliq.ttf}
+\defpersianfont\chapternumber[Path=Fonts/,Scale=3]{XB Niloofar.ttf}
+\defpersianfont\naz[Path=Fonts/,Scale=0.9]{B Nazanin.TTF}
+\defpersianfont\nazz[Path=Fonts/,Scale=1]{B Nazanin.TTF}
+\defpersianfont\nazzz[Path=Fonts/,Scale=1.1]{B Nazanin.TTF}
+\defpersianfont\nazzzz[Path=Fonts/,Scale=1.4]{B Nazanin.TTF}
+\defpersianfont\nazzzzz[Path=Fonts/,Scale=1.7]{B Nazanin.TTF}
+\defpersianfont\Titr[Path=Fonts/,Scale=1.4]{Titr.ttf}
+\deflatinfont\Tim[Path=Fonts/,Scale=.9]{Times New Roman.ttf}
+\deflatinfont\Timm[Path=Fonts/,Scale=1]{Times New Roman.ttf}
+\deflatinfont\Timmm[Path=Fonts/,Scale=1.1]{Times New Roman.ttf}
+\deflatinfont\Timmmm[Path=Fonts/,Scale=1.2]{Times New Roman.ttf}
+\deflatinfont\Timmmmm[Path=Fonts/,Scale=1.3]{Times New Roman.ttf}
+\deflatinfont\Timmmmmm[Path=Fonts/,Scale=1.4]{Times New Roman.ttf}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+% دستوری برای حذف کلمه «چکیده»
+%\renewcommand{\abstractname}{}
+% دستوری برای حذف کلمه «abstract»
+\renewcommand{\latinabstract}{}
+% دستوری برای تغییر نام کلمه «اثبات» به «برهان»
+\renewcommand\proofname{\textbf{برهان}}
+% دستوری برای تغییر نام کلمه «کتاب‌نامه» به «مراجع»
+\renewcommand{\bibname}{مراجع}
+\renewcommand{\indexname}{فهرست نمادها}
+% دستوری برای تعریف واژه‌نامه انگلیسی به فارسی
+\newcommand\persiangloss[2]{#1\dotfill\lr{#2}\\}
+% دستوری برای تعریف واژه‌نامه فارسی به انگلیسی
+\newcommand\englishgloss[2]{#2\dotfill\lr{#1}\\}
+% تعریف دستور جدید «\پ» برای خلاصه‌نویسی جهت نوشتن عبارت «پروژه/پایان‌نامه/رساله»
+\newcommand{\پ}{پروژه/پایان‌نامه/رساله }
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+% تعریف و نحوه ظاهر شدن عنوان قضیه‌ها، تعریف‌ها، مثال‌ها و ...
+\theoremstyle{definition}
+\newtheorem{definition}{تعریف}[chapter]
+\theoremstyle{plain}
+%\newtheorem{s}[definition]{}
+\newtheorem{theorem}[definition]{قضیه}
+\newtheorem{lemma}[definition]{لم}
+\newtheorem{proposition}[definition]{گزاره}
+\newtheorem{corollary}[definition]{نتیجه}
+\newtheorem{remark}[definition]{تبصره}
+\theoremstyle{definition}
+\newtheorem{example}[definition]{مثال}
+\newtheorem{notation}[definition]{نمادگذاری}
+\newtheorem{definitiont}[definition]{تعریف و نمادگذاری}
+\newtheorem{obs}[definition]{ملاحظه}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% دستورهایی برای سفارشی کردن سربرگ صفحات
+\csname@twosidetrue\endcsname
+\pagestyle{fancy}
+\setlength{\headheight}{15pt}
+\emergencystretch=2em
+\fancyhf{}
+\fancyhead[OR,ER]{\thepage}
+\fancyhead[OL]{\small\rightmark}
+\fancyhead[EL]{\small\leftmark}
+\renewcommand{\chaptermark}[1]{%
+\markboth{\thechapter.\ #1}{}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\rt}{\rightarrow}
+\newcommand{\lrt}{\longrightarrow}
+\newcommand{\lto}{\longrightarrow}
+\newcommand{\st}{\stackrel}
+
+\newcommand{\X}{\textbf{X}}
+\newcommand{\Y}{\textbf{Y}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\W}{\textbf{W}}
+\newcommand{\PP}{\textbf{P}}
+\newcommand{\II}{\textbf{I}}
+\newcommand{\QQ}{\textbf{Q}}
+\newcommand{\bb}{{\rm b}}
+\newcommand{\CP}{\mathcal{P}}
+\newcommand{\F}{\mathbf{F}}
+\newcommand{\BF}{\mathbf{F}}
+\newcommand{\CQ}{\mathcal{Q}}
+\newcommand{\CD}{\mathcal{D}}
+\newcommand{\CCM}{\mathcal{M}}
+\newcommand{\Lf}{\mathcal{L}f}
+\newcommand{\Sf}{\mathcal{S}f}
+
+\newcommand{\Ga}{\Gamma}
+\newcommand{\La}{\Lambda}
+\newcommand{\om}{\omega}
+\newcommand{\al}{\alpha}
+\newcommand{\la}{\lambda}
+\newcommand{\Tr}{{\rm{Tr}}}
+\newcommand{\Dtr}{{\mathbf{D}\rm{Tr}}}
+\newcommand{\DD}{{\rm{D}}}
+\newcommand{\J}{\rm{J}}
+\newcommand{\tc}{\bigotimes_{\mathcal{C}}}
+
+\newcommand{\cm}{\mathbf{C}(\rm{mod} \Lambda)}
+\newcommand{\cmo}{\mathbf{C}(\rm{mod} \Lambda^{\rm{op}})}
+\newcommand{\cmb}{\mathbf{C}^{\rm{b}}(\rm{mod} \Lambda)}
+\newcommand{\mmod}{{\rm mod}\mbox{-}}
+\newcommand{\Mod}{{\rm Mod}\mbox{-}}
+\newcommand{\prj}{{\rm prj}\mbox{-}}
+\newcommand{\Gprj}{{\rm Gprj}\mbox{-}}
+\newcommand{\Ginj}{{\rm Ginj}\mbox{-}}
+\newcommand{\rad}{{\rm rad}~}
+\newcommand{\inj}{{\rm inj}\mbox{-}}
+\newcommand{\soc}{{\rm soc}}
+\newcommand{\Tor}{{\rm Tor}}
+\newcommand{\Rep}{{\rm Rep}}
+\newcommand{\rep}{{\rm rep}}
+\newcommand{\Inj}{{\rm Inj}\mbox{-}}
+\newcommand{\GInj}{{\rm GInj}\mbox{-}}
+\newcommand{\Prj}{{\rm Prj}\mbox{-}}
+\newcommand{\GPrj}{{\rm GPrj}\mbox{-}}
+\newcommand{\Sum}{{\rm Sum}\mbox{-}}
+\newcommand{\summ}{{\rm sum}\mbox{-}}
+\newcommand{\Flat}{{\rm Flat}\mbox{-}}
+\newcommand{\Vecc}{{\rm Vec}}
+\newcommand{\vecc}{{\rm vec}}
+\newcommand{\gr}{{\rm gr}\mbox{-}}
+\newcommand{\add}{{\rm add}\mbox{-}}
+
+
+\newcommand{\End}{{\rm{End}}}
+\newcommand{\lan}{\langle}
+\newcommand{\ran}{\rangle}
+
+\newcommand{\BC}{\mathbb{C} }
+\newcommand{\R}{\mathbb{R} }
+\newcommand{\BD}{\mathbf{D}}
+\newcommand{\BZ}{\mathbf{Z}}
+\newcommand{\D}{\mathbb{D} }
+\newcommand{\K}{\mathbb{K} }
+\newcommand{\CM}{{\rm CM}\mbox{-}}
+\newcommand{\CF}{\mathcal{F}}
+\newcommand{\CI}{\mathcal{I}}
+\newcommand{\CT}{\mathcal{T}}
+\newcommand{\CV}{\mathcal{V}}
+\newcommand{\CS}{\mathcal{S}}
+\newcommand{\CY}{\mathcal{Y}}
+\newcommand{\CX}{\mathcal{X}}
+\newcommand{\BI}{\mathbf{I}}
+
+
+\newcommand{\N}{\mathbb{N} }
+\newcommand{\Q}{\mathbf{Q} }
+%\newcommand{\Z}{\mathbb{Z} }
+
+\newcommand{\CA}{\mathcal{A} }
+\newcommand{\CC}{\mathcal{C} }
+\newcommand{\BX}{\mathbf{X}}
+\newcommand{\BY}{\mathbf{Y}}
+
+\newcommand{\im}{{\rm{Im}}}
+\newcommand{\op}{{\rm{op}}}
+\newcommand{\inc}{{\rm{inc}}}
+\newcommand{\can}{{\rm{can}}}
+\newcommand{\perf}{{\rm perf}}
+\newcommand{\coperf}{{\rm coperf}}
+
+\newcommand{\Coker}{{\rm{Coker}}}
+\newcommand{\Ker}{{\rm{Ker}}}
+
+\newcommand{\Hom}{{\rm{Hom}}}
+\newcommand{\Ext}{{\rm{Ext}}}
+
+%% boldface letters
+\def\bfm#1{\protect{\makebox{\boldmath $#1$}}}
+\def\b {\bfm{b}}
+\def\a {\bfm{a}}
+\def\aalpha {\bfm{\alpha}}
+\def\bbeta {\bfm{\beta}}
+\def\eell {\bfm{\ell}}
+\def\llambda {\bfm{\lambda}}
+\def\pphi {\bfm{\phi}}
+\def\f {\bfm{f}}
+\def\p {\bfm{p}}
+\def\q {\bfm{q}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%
+% دستورهایی برای سفارشی کردن صفحات اول فصل‌ها
+\makeatletter
+\newcommand\mycustomraggedright{%
+ \if@RTL\raggedleft%
+ \else\raggedright%
+ \fi}
+\def\@part[#1]#2{%
+\ifnum \c@secnumdepth >-2\relax
+\refstepcounter{part}%
+\addcontentsline{toc}{part}{\thepart\hspace{1em}#1}%
+\else
+\addcontentsline{toc}{part}{#1}%
+\fi
+\markboth{}{}%
+{\centering
+\interlinepenalty \@M
+\ifnum \c@secnumdepth >-2\relax
+ \huge\bfseries \partname\nobreakspace\thepart
+\par
+\vskip 20\p@
+\fi
+\Huge\bfseries #2\par}%
+\@endpart}
+\def\@makechapterhead#1{%
+\vspace*{-30\p@}%
+{\parindent \z@ \mycustomraggedright %\@mycustomfont
+\ifnum \c@secnumdepth >\m@ne
+\if@mainmatter
+\vskip 100\p@
+\huge\bfseries \@chapapp\space {{\chapternumber}\thechapter}
+\par\nobreak
+\vskip 40\p@
+\fi
+\fi
+\interlinepenalty\@M
+\Huge \bfseries #1\par\nobreak
+\vskip 70\p@
+}}
+\renewcommand\tableofcontents{%
+    \if@twocolumn
+      \@restonecoltrue\onecolumn
+    \else
+      \@restonecolfalse
+    \fi
+    \chapter*{\vspace*{2cm}\contentsname
+        \@mkboth{\MakeUppercase\contentsname}{\MakeUppercase\contentsname}}%
+    \@starttoc{toc}%
+    \if@restonecol\twocolumn\fi
+}
+\makeatother 
