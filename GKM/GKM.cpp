@@ -59,6 +59,26 @@ GKM::GKM(std::vector<std::vector<int>> &NN,std::vector<std::vector<double>> &NND
     // printMemoryUsage("After buildTree");
 }
 
+GKM::GKM(std::vector<std::vector<int>> &NN,std::vector<std::vector<double>> &NND,int c_true, int debug,std::vector<int> &init_labels)
+    :NN(NN), NND(NND), c_true(c_true), debug(debug){
+
+    if(debug==1){
+        std::cout<<"start!"<<std::endl;
+    }
+
+    this->knn = NN[0].size();
+
+    std::vector<double> last_column;
+    for(auto& row:NND){
+        last_column.push_back(row.back());
+    }
+    this->max_distance = *std::max_element(last_column.begin(),last_column.end());
+
+    cf::symmetry(this->NN, this->NND, 1, max_distance);
+    initializeClustersFromLabels(init_labels);
+    buildTreeFromClusters();
+}
+
 
 GKM::~GKM(){}
 
@@ -158,6 +178,70 @@ void GKM::initializeClusters(){
     }
 
 }
+
+void GKM::initializeClustersFromLabels(const std::vector<int>& init_labels){
+    N = NN.size();
+    labels = replace_with_continuous(init_labels);
+    clusters_to_samples.clear();
+    clusters_to_samples.resize(N);
+    tightness.clear();
+    tightness.resize(N,0);
+    nearest_clusters.clear();
+    nearest_clusters.resize(N);
+    c_now = 0;
+
+    for(int i=0; i<N; ++i){
+        int label = labels[i];
+        clusters_to_samples[label].push_back(i);
+        if(label + 1 > c_now){
+            c_now = label + 1;
+        }
+    }
+    computeInitialTightness();
+    loss = 0;
+    for(double value: tightness){
+        loss += value;
+    }
+}
+
+void GKM::computeInitialTightness(){
+    std::vector<int> cluster_sizes(N, 0);
+    std::vector<int> observed_counts(N, 0);
+    std::fill(tightness.begin(), tightness.end(), 0);
+
+    for(int label: labels){
+        cluster_sizes[label] += 1;
+    }
+
+    for(int i=0; i<N; ++i){
+        int ci = labels[i];
+        for(size_t index=0; index<NN[i].size(); ++index){
+            int j = NN[i][index];
+            if(i==j){
+                continue;
+            }
+            if(labels[j] == ci){
+                tightness[ci] += NND[i][index];
+                observed_counts[ci] += 1;
+            }
+        }
+    }
+
+    for(int c=0; c<N; ++c){
+        int size = cluster_sizes[c];
+        if(size <= 1){
+            tightness[c] = 0;
+            continue;
+        }
+        int expected = size * (size - 1);
+        int missing = expected - observed_counts[c];
+        if(missing > 0){
+            tightness[c] += missing * max_distance;
+        }
+        tightness[c] /= (2.0 * size);
+    }
+}
+
 std::vector<int> GKM::replace_with_continuous(const std::vector<int>& nums) {
     std::unordered_map<int, int> num_dict;  // Create an unordered map to store the mapping of values
     std::vector<int> new_nums;  // Create a new vector to store the mapped values
@@ -173,6 +257,46 @@ std::vector<int> GKM::replace_with_continuous(const std::vector<int>& nums) {
     }
     
     return new_nums;
+}
+
+double GKM::clusterDistance(int a, int b){
+    int n_a = clusters_to_samples[a].size();
+    int n_b = clusters_to_samples[b].size();
+    if(n_a == 0 || n_b == 0){
+        return max_distance;
+    }
+
+    double observed = 0;
+    int observed_count = 0;
+    for(int sample: clusters_to_samples[a]){
+        for(size_t index=0; index<NN[sample].size(); ++index){
+            int nb = NN[sample][index];
+            if(labels[nb] == b){
+                observed += NND[sample][index];
+                observed_count += 1;
+            }
+        }
+    }
+    for(int sample: clusters_to_samples[b]){
+        for(size_t index=0; index<NN[sample].size(); ++index){
+            int nb = NN[sample][index];
+            if(labels[nb] == a){
+                observed += NND[sample][index];
+                observed_count += 1;
+            }
+        }
+    }
+
+    int expected = 2 * n_a * n_b;
+    int missing = expected - observed_count;
+    double cross_sum = observed;
+    if(missing > 0){
+        cross_sum += missing * max_distance;
+    }
+    cross_sum /= 2.0;
+
+    double merged_tightness = (tightness[a] * n_a + tightness[b] * n_b + cross_sum) / (n_a + n_b);
+    return merged_tightness - tightness[a] - tightness[b];
 }
 
 void GKM::buildTree(){
@@ -198,6 +322,32 @@ void GKM::buildTree(){
     }
 
 
+}
+
+void GKM::buildTreeFromClusters(){
+    for(int i=0; i<N; ++i){
+        int ci = labels[i];
+        for(size_t index=0; index<NN[i].size(); ++index){
+            int j = NN[i][index];
+            if(i==j){
+                continue;
+            }
+
+            int cj = labels[j];
+            if(ci == cj){
+                continue;
+            }
+
+            int a = std::min(ci, cj);
+            int b = std::max(ci, cj);
+            if(nearest_clusters[a].find(b) == nearest_clusters[a].end()){
+                double distance_temp = clusterDistance(a, b);
+                tree.insert({distance_temp, a, b});
+                nearest_clusters[a][b] = distance_temp;
+                nearest_clusters[b][a] = distance_temp;
+            }
+        }
+    }
 }
 
 

@@ -10,6 +10,7 @@ cdef extern from "GKM.h":
     cdef cppclass GKM:
         GKM() except +
         GKM(vector[vector[int]] &NN, vector[vector[double]] &NND, int c_true, int debug) except +
+        GKM(vector[vector[int]] &NN, vector[vector[double]] &NND, int c_true, int debug, vector[int] &init_labels) except +
         void opt()
         #void __dealloc__()
 

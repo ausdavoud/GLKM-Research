@@ -38,7 +38,11 @@ private:
     //std::set<std::tuple<double, int, int>> tree;
 
     void initializeClusters();
+    void initializeClustersFromLabels(const std::vector<int>& init_labels);
+    void computeInitialTightness();
     void buildTree();
+    void buildTreeFromClusters();
+    double clusterDistance(int a, int b);
     //void mergeClusters();
     void mergeClusters(int i, int j, double min_distance);
     void symmetry(std::vector<std::vector<int>> &NN, std::vector<std::vector<double>> &NND);
@@ -54,6 +58,7 @@ public:
     
     GKM();
     GKM(std::vector<std::vector<int>> &NN,std::vector<std::vector<double>> &NND,int c_true,int debug);
+    GKM(std::vector<std::vector<int>> &NN,std::vector<std::vector<double>> &NND,int c_true,int debug,std::vector<int> &init_labels);
     ~GKM();
 
     void opt();

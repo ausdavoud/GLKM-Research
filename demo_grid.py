@@ -1,38 +1,63 @@
-from GKM import GKM
-from LKM.FLK import FLK
+import argparse
+
 import numpy as np
-from FeiPub import Gfuns, Mfuns, IFuns
+
+from FeiPub import IFuns
+from FeiPub.glkm_runner import add_metrics, compare_raw_vs_kpp, print_comparison, run_glkm_once
+from FeiPub.kpp import kpp_warm_start_labels
 
 
-data_path = './dataset/'
-data_name = 'D1'  
-X, y_true, NN, NND, knn_time = IFuns.load_toy(f"{data_path}{data_name}.mat")
-k = len(np.unique(y_true))      # c_true
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run GLKM on a toy dataset with precomputed NN/NND.")
+    parser.add_argument("--data-path", default="./dataset/")
+    parser.add_argument("--data-name", default="D1")
+    parser.add_argument("--cd-iter", type=int, default=100)
+    parser.add_argument("--kpp-init", action="store_true")
+    parser.add_argument("--kpp-factor", type=float, default=4.0)
+    parser.add_argument("--kpp-random-state", type=int, default=0)
+    parser.add_argument("--kpp-n-init", type=int, default=1)
+    parser.add_argument("--no-compare-raw", action="store_true")
+    return parser.parse_args()
 
-print('----')
 
-obj = GKM(NN=NN.astype(np.int32), NND=NND.astype(np.float64), c_true=k, debug=0)
-obj.opt()
-y_pred0 = obj.y_pred
-print('----')
+def main():
+    args = parse_args()
+    X, y_true, NN, NND, knn_time = IFuns.load_toy(f"{args.data_path}{args.data_name}.mat")
+    k = len(np.unique(y_true))
+    print(f"K is {k}")
 
-CD  = True      ## coordinate descent
-if CD:
-    ## Following is the coordinate descent fine-tuning stage of the objective function, which is optional.
-    if not obj.connected:  
-        print('The k-nearest neighbor graph is not connected. Recommend increase the value of k.')   
-    y = IFuns.replace_with_continuous(y_pred0)
-    init_Y = [y]
-    mod = FLK(NN=NN.astype(np.int32), NND=NND.astype(np.float64), max_d=-1, c_true=k, debug=False)
-    mod.opt(ITER=100, init_Y=init_Y)
-    y_pred = mod.Y[0]
-else:
-    y_pred = y_pred0
+    if not args.no_compare_raw:
+        raw, kpp = compare_raw_vs_kpp(
+            X=X,
+            y_true=y_true,
+            NN=NN,
+            NND=NND,
+            c_true=k,
+            kpp_factor=args.kpp_factor,
+            kpp_random_state=args.kpp_random_state,
+            kpp_n_init=args.kpp_n_init,
+            cd_iter=args.cd_iter,
+        )
+        print_comparison([raw, kpp])
+        return
 
-acc = Mfuns.accuracy(y_true, y_pred)
-nmi = 	Mfuns.nmi(y_true, y_pred)
-purity = Mfuns.purity(y_true, y_pred)
-ari = Mfuns.ari(y_true, y_pred)
-print(f'{data_name}: \tacc={acc:.3f}, nmi={nmi:.3f}, purity={purity:.3f}')
+    init_labels = None
+    method = "raw"
+    if args.kpp_init:
+        init_labels = kpp_warm_start_labels(
+            X,
+            c_true=k,
+            factor=args.kpp_factor,
+            random_state=args.kpp_random_state,
+            n_init=args.kpp_n_init,
+        )
+        method = "kpp+glkm"
 
-## D1, acc=0.990, nmi=0.996, purity=0.990, (knn=n/c*1.2), time = 0.3373 + 3.9542
+    result = run_glkm_once(NN, NND, k, init_labels=init_labels, cd_iter=args.cd_iter)
+    result["method"] = method
+    add_metrics(result, y_true)
+    print_comparison([result])
+
+
+if __name__ == "__main__":
+    main()
