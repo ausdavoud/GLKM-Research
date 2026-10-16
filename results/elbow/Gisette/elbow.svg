@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="520" viewBox="0 0 880 520">
+<rect width="100%" height="100%" fill="white" />
+<style>
+text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; font-size: 13px; }
+.title { font-size: 20px; font-weight: 650; }
+.label { font-size: 14px; font-weight: 600; }
+</style>
+<text x="440.0" y="30" text-anchor="middle" class="title">Gisette: GLKM elbow curve</text>
+<line x1="82.0" y1="450" x2="82.0" y2="456" stroke="#475569" /><text x="82.0" y="475" text-anchor="middle">2</text><line x1="191.7" y1="450" x2="191.7" y2="456" stroke="#475569" /><text x="191.7" y="475" text-anchor="middle">3</text><line x1="301.4" y1="450" x2="301.4" y2="456" stroke="#475569" /><text x="301.4" y="475" text-anchor="middle">4</text><line x1="411.1" y1="450" x2="411.1" y2="456" stroke="#475569" /><text x="411.1" y="475" text-anchor="middle">5</text><line x1="520.9" y1="450" x2="520.9" y2="456" stroke="#475569" /><text x="520.9" y="475" text-anchor="middle">7</text><line x1="630.6" y1="450" x2="630.6" y2="456" stroke="#475569" /><text x="630.6" y="475" text-anchor="middle">8</text><line x1="740.3" y1="450" x2="740.3" y2="456" stroke="#475569" /><text x="740.3" y="475" text-anchor="middle">9</text><line x1="850.0" y1="450" x2="850.0" y2="456" stroke="#475569" /><text x="850.0" y="475" text-anchor="middle">10</text><line x1="76" y1="450.0" x2="82" y2="450.0" stroke="#475569" /><text x="72" y="454.0" text-anchor="end">2.54e+07</text><line x1="82" y1="450.0" x2="850" y2="450.0" stroke="#e2e8f0" /><line x1="76" y1="370.4" x2="82" y2="370.4" stroke="#475569" /><text x="72" y="374.4" text-anchor="end">2.55e+07</text><line x1="82" y1="370.4" x2="850" y2="370.4" stroke="#e2e8f0" /><line x1="76" y1="290.8" x2="82" y2="290.8" stroke="#475569" /><text x="72" y="294.8" text-anchor="end">2.56e+07</text><line x1="82" y1="290.8" x2="850" y2="290.8" stroke="#e2e8f0" /><line x1="76" y1="211.2" x2="82" y2="211.2" stroke="#475569" /><text x="72" y="215.2" text-anchor="end">2.57e+07</text><line x1="82" y1="211.2" x2="850" y2="211.2" stroke="#e2e8f0" /><line x1="76" y1="131.6" x2="82" y2="131.6" stroke="#475569" /><text x="72" y="135.6" text-anchor="end">2.58e+07</text><line x1="82" y1="131.6" x2="850" y2="131.6" stroke="#e2e8f0" /><line x1="76" y1="52.0" x2="82" y2="52.0" stroke="#475569" /><text x="72" y="56.0" text-anchor="end">2.59e+07</text><line x1="82" y1="52.0" x2="850" y2="52.0" stroke="#e2e8f0" />
+<line x1="82" y1="52" x2="82" y2="450" stroke="#0f172a" />
+<line x1="82" y1="450" x2="850" y2="450" stroke="#0f172a" />
+<polyline points="82.0,52.0 178.0,106.4 274.0,158.7 370.0,210.4 466.0,259.5 562.0,308.1 658.0,356.6 754.0,404.4 850.0,450.0" fill="none" stroke="#2563eb" stroke-width="2.5" />
+<circle cx="82.0" cy="52.0" r="4.5" fill="#2563eb" />
+<circle cx="178.0" cy="106.4" r="4.5" fill="#2563eb" />
+<circle cx="274.0" cy="158.7" r="4.5" fill="#2563eb" />
+<circle cx="370.0" cy="210.4" r="4.5" fill="#2563eb" />
+<circle cx="466.0" cy="259.5" r="4.5" fill="#2563eb" />
+<circle cx="562.0" cy="308.1" r="4.5" fill="#2563eb" />
+<circle cx="658.0" cy="356.6" r="4.5" fill="#2563eb" />
+<circle cx="754.0" cy="404.4" r="4.5" fill="#2563eb" />
+<circle cx="850.0" cy="450.0" r="4.5" fill="#2563eb" />
+<line x1="370.0" y1="52" x2="370.0" y2="450" stroke="#dc2626" stroke-width="2" stroke-dasharray="7 6" /><text x="378.0" y="70" fill="#dc2626">estimated k = 5</text>
+<text x="466.0" y="498" text-anchor="middle" class="label">number of clusters c</text>
+<text x="22" y="251.0" text-anchor="middle" transform="rotate(-90 22 251.0)" class="label">GLKM objective</text>
+</svg>
