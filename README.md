@@ -2,14 +2,28 @@
 
 # GLKM Research
 
-**Studying a new greedy k-means, and testing two ways to improve it.**<br>
-Bachelor project in computer science &nbsp;·&nbsp; University of Isfahan &nbsp;·&nbsp; 2026
+**Studying a new greedy k-means, and testing two ways to improve it.**
 
 <br>
 
-<img alt="Animation: 320 points start as single clusters and merge, pair by pair, into four clusters" src="docs/img/glkm-merging.webp">
+<a href="thesis/Thesis.pdf"><img alt="The thesis: its title page in front, with the abstract and pages from chapters 1, 4 and 5 behind it" src="docs/img/thesis.png"></a>
 
-<sub>Real GLKM output: the code in this repository, run once for every cluster count from 320 down to 4.</sub>
+<br>
+
+### [A Study and Evaluation of k-means Optimization Methods,<br>with a Focus on the GLKM Algorithm](thesis/Thesis.pdf)
+
+Bachelor's thesis in Computer Science &nbsp;·&nbsp; written in Persian
+
+<sub>SUPERVISOR</sub><br>
+**Dr. Najmeh Hosseini Monjezi**
+
+<sub>STUDENT</sub><br>
+**Davoud Nosrati Amirabadi**
+
+Department of Computer Science, Faculty of Mathematics and Statistics<br>
+University of Isfahan &nbsp;·&nbsp; July 2026
+
+[**Read the thesis (PDF)**](thesis/Thesis.pdf) &nbsp;&nbsp;·&nbsp;&nbsp; [LaTeX source](thesis/) &nbsp;&nbsp;·&nbsp;&nbsp; [Interactive pages](https://ausdavoud.github.io/GLKM-Research/)
 
 </div>
 
@@ -52,6 +66,12 @@ The key step is an identity: a cluster's cost can be written using only distance
 ```
 
 So the cost of merging two clusters can be updated from cluster statistics alone. To avoid storing all n² distances, GLKM keeps a k-nearest-neighbour graph, uses a single large constant γ for pairs the graph leaves out, and only considers merges between neighbouring clusters.
+
+<p align="center">
+  <img alt="Animation: 320 points start as single clusters and merge, pair by pair, into four clusters" src="docs/img/glkm-merging.webp">
+  <br>
+  <sub>Real GLKM output: the code in this repository, run once for every cluster count from 320 down to 4.</sub>
+</p>
 
 ### 3 · Idea one: let the elbow choose k &nbsp;✗
 
