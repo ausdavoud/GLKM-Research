@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy
 from Cython.Build import cythonize
 from setuptools import setup, Extension
@@ -8,6 +9,12 @@ def get_extensions():
         compile_args = ['/std:c++17']
         link_args = ["psapi.lib"]
         libraries = []
+    elif sys.platform == "darwin":
+        # Apple clang has no -fopenmp of its own; use Homebrew's libomp (brew install libomp)
+        omp = os.environ.get("LIBOMP_PREFIX", "/opt/homebrew/opt/libomp")
+        compile_args = ['-Xpreprocessor', '-fopenmp', f'-I{omp}/include', '-std=c++17']
+        link_args = [f'-L{omp}/lib', '-lomp']
+        libraries = ['m']
     else:
         compile_args = ['-fopenmp', '-std=c++17']
         link_args = ['-fopenmp', '-std=c++17']
