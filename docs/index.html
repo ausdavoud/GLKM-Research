@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>k-means, step by step</title>
+  <meta name="description" content="Two interactive pages from a bachelor project on k-means and GLKM: MacQueen against Lloyd, and Hartigan–Wong against Lloyd.">
+  <style>
+    :root{--ink:#1f2933;--muted:#7b8794;--line:#e4e7eb;--paper:#fbfaf7;--accent:#3b5bdb}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.6 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+    main{max-width:760px;margin:0 auto;padding:64px 20px}
+    h1{font-size:clamp(30px,6vw,44px);line-height:1.1;margin:0 0 10px;letter-spacing:-.01em}
+    p.lead{color:var(--muted);margin:0 0 36px}
+    a.card{display:grid;grid-template-columns:1fr;gap:12px;text-decoration:none;color:inherit;background:#fff;border:1px solid var(--line);
+      border-radius:14px;padding:14px;margin-bottom:22px;box-shadow:0 10px 30px -22px rgba(31,41,51,.5);transition:transform .15s}
+    a.card:hover{transform:translateY(-2px)}
+    a.card img{width:100%;border-radius:8px;border:1px solid var(--line)}
+    a.card b{font-size:19px}
+    a.card span{color:var(--muted);font-size:15px}
+    footer{color:var(--muted);font-size:14px;margin-top:40px}
+    footer a{color:inherit}
+  </style>
+</head>
+<body>
+<main>
+  <h1>k-means, step by step</h1>
+  <p class="lead">Two pages from a bachelor project on k-means and GLKM. Each runs two classic algorithms side by side on the same data, one step at a time. The pages are in Persian.</p>
+  <a class="card" href="macqueen-vs-lloyd.html">
+    <img src="img/macqueen-vs-lloyd.png" alt="MacQueen's online updates next to Lloyd's batch updates">
+    <b>MacQueen (1967) against Lloyd (1957)</b>
+    <span>One point and one mean at a time, against every point and every mean at once.</span>
+  </a>
+  <a class="card" href="hartigan-wong-vs-lloyd.html">
+    <img src="img/hartigan-wong-vs-lloyd.png" alt="Hartigan–Wong single-point moves next to Lloyd's batch rounds">
+    <b>Hartigan–Wong (1979) against Lloyd</b>
+    <span>Single-point moves judged by the change in cost, against Lloyd's batch rounds.</span>
+  </a>
+  <footer>From <a href="https://github.com/ausdavoud/GLKM-Research">GLKM-Research</a>.</footer>
+</main>
+</body>
+</html>

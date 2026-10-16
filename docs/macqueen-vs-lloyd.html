@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MacQueen در برابر Lloyd</title>
+  <style>
+    :root{color-scheme:light;--ink:#17212b;--muted:#65717d;--line:#dce2e8;--paper:#fff;--wash:#f4f6f8;--accent:#1167b1}
+    *{box-sizing:border-box} body{margin:0;background:var(--wash);color:var(--ink);font-family:Vazirmatn,Tahoma,"Segoe UI",sans-serif}
+    main{max-width:1180px;margin:auto;padding:28px 20px 44px} h1{margin:0 0 8px;font-size:clamp(25px,4vw,40px)}
+    .lead{margin:0;color:var(--muted);line-height:1.9}.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:22px 0}
+    button{border:1px solid var(--line);background:var(--paper);padding:10px 15px;border-radius:9px;font:inherit;cursor:pointer}
+    button.primary{background:var(--accent);color:white;border-color:var(--accent)} button:focus-visible{outline:3px solid #87bdf0;outline-offset:2px}
+    .step{font-variant-numeric:tabular-nums;color:var(--muted)} .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    article{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 8px 24px #18222d0a}
+    h2{margin:0;font-size:21px}.tag{display:inline-block;margin-top:7px;padding:4px 8px;border-radius:99px;background:#edf3f8;color:#365269;font-size:12px}
+    canvas{display:block;width:100%;height:auto;margin:16px 0 10px;border:1px solid var(--line);border-radius:10px;background:#fbfcfd}
+    .status{min-height:56px;line-height:1.8}.metrics{display:flex;gap:18px;color:var(--muted);font-size:13px}.metrics b{color:var(--ink);font-size:15px}
+    .note{margin-top:18px;padding:14px 16px;border-right:4px solid var(--accent);background:#eaf3fb;border-radius:8px;line-height:1.9}
+    @media(max-width:760px){.grid{grid-template-columns:1fr}main{padding-inline:12px}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>دو مسیر تاریخی برای رسیدن به k-means</h1>
+  <p class="lead">هر دو پنل از همان داده و همان سه مرکز آغاز می‌کنند. با «مرحله بعد» ببینید MacQueen داده‌ها را برخط و تک‌به‌تک جذب می‌کند، اما Lloyd در هر دور همهٔ نقاط را یک‌جا بازتخصیص می‌دهد.</p>
+  <div class="controls" aria-label="کنترل پویانمایی">
+    <button id="next" class="primary">مرحله بعد</button>
+    <button id="play">پخش خودکار</button>
+    <button id="reset">شروع دوباره</button>
+    <span id="counter" class="step" aria-live="polite"></span>
+  </div>
+  <section class="grid">
+    <article>
+      <h2>MacQueen (1967)</h2><span class="tag">به‌روزرسانی برخط / sequential</span>
+      <canvas id="mac" width="520" height="360" aria-label="نمایش الگوریتم MacQueen"></canvas>
+      <div id="macStatus" class="status"></div>
+      <div class="metrics"><span>نقاط پردازش‌شده: <b id="macN">3</b></span><span>SSE روی کل داده: <b id="macSse">—</b></span></div>
+    </article>
+    <article>
+      <h2>Lloyd (1957/1982)</h2><span class="tag">تخصیص و به‌روزرسانی دسته‌ای / batch</span>
+      <canvas id="lloyd" width="520" height="360" aria-label="نمایش الگوریتم Lloyd"></canvas>
+      <div id="lloydStatus" class="status"></div>
+      <div class="metrics"><span>تکرار کامل: <b id="lloydN">0</b></span><span>SSE روی کل داده: <b id="lloydSse">—</b></span></div>
+    </article>
+  </section>
+  <div class="note"><b>تفاوت کلیدی:</b> نسخهٔ MacQueen مرکز برنده را با میانگین تجمعی همان لحظه تغییر می‌دهد و به ترتیب ورود داده حساس است. روش Lloyd دو شرط بهینگی را به‌صورت متناوب اعمال می‌کند: نزدیک‌ترین مرکز برای هر نقطه، سپس میانگین هر خوشه برای مرکز آن.</div>
+</main>
+<script>
+const P=[
+  [72,86],[258,72],[410,250],[88,105],[60,132],[111,82],[79,151],[126,121],[48,91],[103,166],[135,96],
+  [239,92],[282,112],[248,143],[315,86],[292,157],[222,126],[327,137],[270,53],[348,104],
+  [394,222],[435,274],[382,291],[461,244],[414,318],[360,255],[448,323],[395,264],[474,285],[344,303]
+];
+const colors=["#1378be","#dc4a4a","#2d9b68"], init=[P[0].slice(),P[1].slice(),P[2].slice()];
+let mac, lloyd, step=0, timer=null;
+const $=id=>document.getElementById(id);
+function nearest(p,c){let best=0,d=Infinity;c.forEach((m,i)=>{const q=(p[0]-m[0])**2+(p[1]-m[1])**2;if(q<d){d=q;best=i}});return best}
+function sse(c){return P.reduce((s,p)=>{const m=c[nearest(p,c)];return s+(p[0]-m[0])**2+(p[1]-m[1])**2},0)}
+function fresh(){return{centers:init.map(x=>x.slice()),labels:Array(P.length).fill(-1),weights:[1,1,1],seen:3,iter:0}}
+function macStep(){
+  if(mac.seen>=P.length)return;
+  const i=mac.seen,p=P[i],k=nearest(p,mac.centers),w=mac.weights[k];
+  mac.centers[k]=[(w*mac.centers[k][0]+p[0])/(w+1),(w*mac.centers[k][1]+p[1])/(w+1)];
+  mac.weights[k]++;mac.labels[i]=k;mac.seen++;
+  $("macStatus").textContent=`نقطهٔ ${i+1} فقط به خوشهٔ ${k+1} افزوده شد؛ تنها همان مرکز با میانگین تجمعی به‌روز شد.`;
+}
+function lloydStep(){
+  lloyd.labels=P.map(p=>nearest(p,lloyd.centers));
+  lloyd.centers=lloyd.centers.map((m,k)=>{const q=P.filter((_,i)=>lloyd.labels[i]===k);return q.length?[q.reduce((s,p)=>s+p[0],0)/q.length,q.reduce((s,p)=>s+p[1],0)/q.length]:m});
+  lloyd.iter++;
+  $("lloydStatus").textContent=`تکرار ${lloyd.iter}: همهٔ ${P.length} نقطه تخصیص یافتند و سپس هر سه مرکز از میانگین کامل خوشه‌ها محاسبه شدند.`;
+}
+function draw(canvas,state,online){
+  const ctx=canvas.getContext("2d");ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle="#edf0f3";for(let x=40;x<520;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,360);ctx.stroke()}
+  for(let y=40;y<360;y+=80){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(520,y);ctx.stroke()}
+  P.forEach((p,i)=>{const visible=!online||i<state.seen,k=visible?(online?(i<3?i:state.labels[i]):state.labels[i]):-1;ctx.beginPath();ctx.arc(p[0],p[1],5.5,0,Math.PI*2);ctx.fillStyle=k<0?"#ccd3da":colors[k];ctx.globalAlpha=visible?0.82:0.35;ctx.fill()});
+  ctx.globalAlpha=1;state.centers.forEach((m,k)=>{ctx.fillStyle=colors[k];ctx.strokeStyle="#fff";ctx.lineWidth=3;ctx.beginPath();ctx.arc(m[0],m[1],11,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle="#fff";ctx.font="bold 12px sans-serif";ctx.textAlign="center";ctx.fillText("×",m[0],m[1]+4)});
+}
+function render(){
+  draw($("mac"),mac,true);draw($("lloyd"),lloyd,false);
+  $("macN").textContent=mac.seen;$("lloydN").textContent=lloyd.iter;
+  $("macSse").textContent=Math.round(sse(mac.centers)).toLocaleString("fa-IR");$("lloydSse").textContent=Math.round(sse(lloyd.centers)).toLocaleString("fa-IR");
+  $("counter").textContent=`مرحله ${step.toLocaleString("fa-IR")}`;
+}
+function advance(){if(mac.seen>=P.length&&lloyd.iter>=8){stop();return}step++;macStep();if(lloyd.iter<8)lloydStep();render()}
+function stop(){clearInterval(timer);timer=null;$("play").textContent="پخش خودکار"}
+function reset(){stop();mac=fresh();lloyd=fresh();mac.labels[0]=0;mac.labels[1]=1;mac.labels[2]=2;step=0;$("macStatus").textContent="سه مشاهدهٔ نخست، سه میانگین اولیه و وزن هرکدام برابر یک است.";$("lloydStatus").textContent="سه مرکز اولیه آماده‌اند؛ هنوز تخصیص دسته‌ای انجام نشده است.";render()}
+$("next").onclick=advance;$("play").onclick=()=>{if(timer)stop();else{timer=setInterval(advance,800);$("play").textContent="توقف"}};$("reset").onclick=reset;
+addEventListener("keydown",e=>{if(e.key==="ArrowLeft"||e.key==="ArrowRight")advance();if(e.key===" "){e.preventDefault();$("play").click()}});
+reset();
+</script>
+</body>
+</html>

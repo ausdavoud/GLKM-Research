@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hartigan–Wong در برابر k-means استاندارد</title>
+  <style>
+    :root{--ink:#17212b;--muted:#65717d;--line:#dce2e8;--paper:#fff;--wash:#f4f6f8;--accent:#7047b8}
+    *{box-sizing:border-box}body{margin:0;background:var(--wash);color:var(--ink);font-family:Vazirmatn,Tahoma,"Segoe UI",sans-serif}
+    main{max-width:1180px;margin:auto;padding:28px 20px 44px}h1{margin:0 0 8px;font-size:clamp(25px,4vw,40px)}.lead{margin:0;color:var(--muted);line-height:1.9}
+    .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:22px 0}button{border:1px solid var(--line);background:#fff;padding:10px 15px;border-radius:9px;font:inherit;cursor:pointer}
+    button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}button:focus-visible{outline:3px solid #bba5e4;outline-offset:2px}.step{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}article{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 8px 24px #18222d0a}
+    h2{margin:0;font-size:21px}.tag{display:inline-block;margin-top:7px;padding:4px 8px;border-radius:99px;background:#f0ebf8;color:#5e4389;font-size:12px}
+    canvas{display:block;width:100%;height:auto;margin:16px 0 10px;border:1px solid var(--line);border-radius:10px;background:#fbfcfd}.status{min-height:78px;line-height:1.8}
+    .metrics{display:flex;gap:18px;color:var(--muted);font-size:13px}.metrics b{color:var(--ink);font-size:15px}.note{margin-top:18px;padding:14px 16px;border-right:4px solid var(--accent);background:#f0ebf8;border-radius:8px;line-height:1.9}
+    @media(max-width:760px){.grid{grid-template-columns:1fr}main{padding-inline:12px}}
+  </style>
+</head>
+<body><main>
+  <h1>چرا Hartigan–Wong فقط «یک k-means دیگر» نیست؟</h1>
+  <p class="lead">Lloyd همهٔ تخصیص‌ها را با نزدیک‌ترین مرکز عوض می‌کند. Hartigan–Wong هزینهٔ واقعی انتقال یک نقطه را، با اثر تغییر اندازه و مرکز هر دو خوشه، می‌سنجد و دو مرحلهٔ OPTRA و QTRAN را متناوب اجرا می‌کند.</p>
+  <div class="controls"><button id="next" class="primary">مرحله بعد</button><button id="play">پخش خودکار</button><button id="reset">شروع دوباره</button><span id="counter" class="step" aria-live="polite"></span></div>
+  <section class="grid">
+    <article><h2>Lloyd / k-means استاندارد</h2><span class="tag">نزدیک‌ترین مرکز + میانگین دسته‌ای</span><canvas id="lloyd" width="520" height="360"></canvas><div id="lloydStatus" class="status"></div><div class="metrics"><span>تکرار: <b id="li">0</b></span><span>SSE: <b id="ls">—</b></span></div></article>
+    <article><h2>Hartigan–Wong (AS 136)</h2><span class="tag">OPTRA + QTRAN + live set</span><canvas id="hw" width="520" height="360"></canvas><div id="hwStatus" class="status"></div><div class="metrics"><span>مرحله: <b id="hi">آغاز</b></span><span>SSE: <b id="hs">—</b></span></div></article>
+  </section>
+  <div class="note"><b>آنچه اضافه شده است:</b> ذخیرهٔ نزدیک‌ترین و دومین خوشه، ضریب‌های اندازهٔ خوشه در آزمون انتقال، به‌روزرسانی فوری مراکز بعد از هر انتقال، مجموعهٔ زنده برای حذف آزمون‌های بی‌اثر، و QTRAN برای بازآزمایی سریع فقط محتمل‌ترین مقصد. خروجی فقط نسبت به انتقال یک نقطه «بهینهٔ محلی» است، نه تضمین بهینهٔ سراسری.</div>
+<script>
+const P=[[62,82],[92,106],[70,142],[120,155],[139,93],[176,124],[208,89],[235,130],[260,92],[285,142],[318,108],[350,151],[374,94],[410,132],[452,92],[85,275],[123,238],[158,286],[198,248],[236,292],[276,244],[314,286],[355,239],[397,281],[446,246]];
+const colors=["#2475b8","#dd4b55","#2b9b68"],init=[[72,86],[260,90],[440,250]],$=id=>document.getElementById(id);let l,h,step,timer;
+function d2(a,b){return(a[0]-b[0])**2+(a[1]-b[1])**2}function nearest(p,c){let q=0,v=Infinity;c.forEach((m,i)=>{const z=d2(p,m);if(z<v){v=z;q=i}});return q}
+function centers(labels){return colors.map((_,k)=>{const q=P.filter((_,i)=>labels[i]===k);return q.length?[q.reduce((s,p)=>s+p[0],0)/q.length,q.reduce((s,p)=>s+p[1],0)/q.length]:init[k].slice()})}
+function sse(state){return P.reduce((s,p,i)=>s+d2(p,state.centers[state.labels[i]]),0)}
+function fresh(){const labels=P.map(p=>nearest(p,init));return{labels,centers:centers(labels),iter:0,phase:0,second:Array(P.length).fill(0),live:new Set([0,1,2]),moved:0}}
+function transferDelta(state,i,to){const from=state.labels[i];if(from===to)return Infinity;const na=state.labels.filter(x=>x===from).length,nb=state.labels.filter(x=>x===to).length;if(na<=1)return Infinity;return nb/(nb+1)*d2(P[i],state.centers[to])-na/(na-1)*d2(P[i],state.centers[from])}
+function lloydStep(){l.labels=P.map(p=>nearest(p,l.centers));l.centers=centers(l.labels);l.iter++;$("lloydStatus").textContent=`تکرار ${l.iter}: یک تخصیص سراسری انجام شد و سپس هر سه مرکز به میانگین خوشهٔ خود منتقل شدند.`}
+function optra(){
+  let moved=0,nextLive=new Set();for(let i=0;i<P.length;i++){const from=h.labels[i];let best=from,bestDelta=0,second=from;
+    for(let k=0;k<3;k++){if(k===from)continue;const delta=transferDelta(h,i,k);if(delta<bestDelta){bestDelta=delta;best=k}if(k!==best)second=k}
+    h.second[i]=best===from?second:from;if(best!==from){h.labels[i]=best;h.centers=centers(h.labels);nextLive.add(from);nextLive.add(best);moved++}}
+  h.live=nextLive;h.moved=moved;h.phase=1;$("hwStatus").textContent=`OPTRA: همهٔ مقصدهای مؤثر بررسی شدند؛ ${moved.toLocaleString("fa-IR")} انتقال کاهندهٔ SSE انجام شد. خوشه‌های تغییرکرده وارد live set شدند.`;
+}
+function qtran(){let moved=0;for(let i=0;i<P.length;i++){const to=h.second[i],from=h.labels[i];if(to!==from&&transferDelta(h,i,to)<0){h.labels[i]=to;h.second[i]=from;h.centers=centers(h.labels);moved++}}h.phase=0;h.iter++;h.moved=moved;$("hwStatus").textContent=`QTRAN: برای هر نقطه فقط مقصد دومِ ذخیره‌شده آزموده شد؛ ${moved.toLocaleString("fa-IR")} انتقال سریع انجام شد.`}
+function draw(canvas,state){const c=canvas.getContext("2d");c.clearRect(0,0,520,360);c.strokeStyle="#edf0f3";for(let x=40;x<520;x+=80){c.beginPath();c.moveTo(x,0);c.lineTo(x,360);c.stroke()}for(let y=40;y<360;y+=80){c.beginPath();c.moveTo(0,y);c.lineTo(520,y);c.stroke()}
+  P.forEach((p,i)=>{c.beginPath();c.arc(p[0],p[1],6,0,Math.PI*2);c.fillStyle=colors[state.labels[i]];c.globalAlpha=.82;c.fill()});c.globalAlpha=1;state.centers.forEach((m,k)=>{c.fillStyle=colors[k];c.strokeStyle="#fff";c.lineWidth=3;c.beginPath();c.arc(m[0],m[1],11,0,Math.PI*2);c.fill();c.stroke();c.fillStyle="#fff";c.textAlign="center";c.font="bold 12px sans-serif";c.fillText("×",m[0],m[1]+4)})}
+function render(){draw($("lloyd"),l);draw($("hw"),h);$("li").textContent=l.iter;$("ls").textContent=Math.round(sse(l)).toLocaleString("fa-IR");$("hi").textContent=h.phase?"QTRAN":"OPTRA";$("hs").textContent=Math.round(sse(h)).toLocaleString("fa-IR");$("counter").textContent=`مرحله ${step.toLocaleString("fa-IR")}`}
+function advance(){if(step>=12){stop();return}step++;lloydStep();h.phase?qtran():optra();render()}function stop(){clearInterval(timer);timer=null;$("play").textContent="پخش خودکار"}
+function reset(){stop();l=fresh();h=fresh();step=0;$("lloydStatus").textContent="تخصیص اولیه بر اساس نزدیک‌ترین مرکز انجام شده است.";$("hwStatus").textContent="نزدیک‌ترین و دومین خوشه برای هر نقطه ذخیره شده‌اند؛ همهٔ خوشه‌ها زنده‌اند.";render()}
+$("next").onclick=advance;$("play").onclick=()=>{if(timer)stop();else{timer=setInterval(advance,950);$("play").textContent="توقف"}};$("reset").onclick=reset;addEventListener("keydown",e=>{if(e.key==="ArrowLeft"||e.key==="ArrowRight")advance();if(e.key===" "){e.preventDefault();$("play").click()}});reset();
+</script></main></body></html>
