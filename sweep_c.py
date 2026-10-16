@@ -8,6 +8,7 @@ import numpy as np
 from GKM import GKM
 from LKM.FLK import FLK
 from FeiPub import Gfuns, IFuns, Mfuns
+from FeiPub.kpp import kpp_warm_start_labels, warm_start_cluster_count
 
 
 def parse_c_values(text):
@@ -35,7 +36,7 @@ def load_dataset(data_dir, name, knn):
     return X, y_true.astype(np.int32), NN, NND, time.perf_counter() - t0
 
 
-def run_once(NN, NND, y_true, c, cd_iter):
+def run_once(NN, NND, y_true, c, cd_iter, init_labels=None, init_seconds=0.0):
     total_t0 = time.perf_counter()
     t0 = time.perf_counter()
     obj = GKM(
@@ -43,6 +44,7 @@ def run_once(NN, NND, y_true, c, cd_iter):
         NND=NND.astype(np.float64),
         c_true=int(c),
         debug=0,
+        init_labels=init_labels,
     )
     obj.opt()
     gkm_elapsed = time.perf_counter() - t0
@@ -66,8 +68,9 @@ def run_once(NN, NND, y_true, c, cd_iter):
         "gkm_loss": float(obj.loss),
         "connected": bool(obj.connected),
         "cd_iter": int(cd_iter),
+        "init_elapsed_sec": float(init_seconds),
         "gkm_elapsed_sec": gkm_elapsed,
-        "total_elapsed_sec": time.perf_counter() - total_t0,
+        "total_elapsed_sec": float(init_seconds) + time.perf_counter() - total_t0,
         "acc": float(Mfuns.accuracy(y_true.copy(), y_pred)),
         "nmi": float(Mfuns.nmi(y_true.copy(), y_pred)),
         "purity": float(Mfuns.purity(y_true.copy(), y_pred)),
@@ -84,6 +87,7 @@ def write_csv(rows, path):
 
 
 def write_svg(rows, path, title):
+    methods = list(dict.fromkeys(r.get("method", "raw") for r in rows))
     xs = [r["c"] for r in rows]
     ys = [r["gkm_loss"] for r in rows]
     w, h = 880, 520
@@ -104,11 +108,23 @@ def write_svg(rows, path, title):
     def sy(y):
         return mt + (ymax - y) / (ymax - ymin) * ph
 
-    points = " ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in zip(xs, ys))
-    circles = "\n".join(
-        f'<circle cx="{sx(x):.1f}" cy="{sy(y):.1f}" r="4.5" fill="#2563eb" />'
-        for x, y in zip(xs, ys)
-    )
+    colors = {"raw": "#2563eb", "kpp+glkm": "#dc2626"}
+    series_svg = []
+    for method in methods:
+        method_rows = [r for r in rows if r.get("method", "raw") == method]
+        method_rows.sort(key=lambda r: r["c"])
+        color = colors.get(method, "#475569")
+        points = " ".join(f"{sx(r['c']):.1f},{sy(r['gkm_loss']):.1f}" for r in method_rows)
+        series_svg.append(f'<polyline points="{points}" fill="none" stroke="{color}" stroke-width="2.5" />')
+        for row in method_rows:
+            series_svg.append(f'<circle cx="{sx(row["c"]):.1f}" cy="{sy(row["gkm_loss"]):.1f}" r="4.5" fill="{color}" />')
+    legend_svg = []
+    for i, method in enumerate(methods):
+        x0 = ml + 12 + i * 130
+        y0 = mt - 20
+        color = colors.get(method, "#475569")
+        legend_svg.append(f'<line x1="{x0}" y1="{y0}" x2="{x0 + 28}" y2="{y0}" stroke="{color}" stroke-width="2.5" />')
+        legend_svg.append(f'<text x="{x0 + 36}" y="{y0 + 4}">{method}</text>')
     x_ticks = np.linspace(xmin, xmax, min(8, len(set(xs))))
     y_ticks = np.linspace(ymin, ymax, 6)
     tick_svg = []
@@ -133,8 +149,8 @@ text {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; 
 {"".join(tick_svg)}
 <line x1="{ml}" y1="{mt}" x2="{ml}" y2="{mt + ph}" stroke="#0f172a" />
 <line x1="{ml}" y1="{mt + ph}" x2="{ml + pw}" y2="{mt + ph}" stroke="#0f172a" />
-<polyline points="{points}" fill="none" stroke="#2563eb" stroke-width="2.5" />
-{circles}
+{"".join(legend_svg)}
+{"".join(series_svg)}
 <text x="{ml + pw / 2}" y="{h - 22}" text-anchor="middle" class="label">number of clusters c</text>
 <text x="22" y="{mt + ph / 2}" text-anchor="middle" transform="rotate(-90 22 {mt + ph / 2})" class="label">GLKM objective</text>
 </svg>
@@ -150,21 +166,64 @@ def main():
     parser.add_argument("--knn", type=int, default=80, help="KNN graph size for datasets without precomputed NN/NND")
     parser.add_argument("--c-values", required=True, type=parse_c_values, help="comma list or start:stop[:step], e.g. 2:20 or 10,20,30")
     parser.add_argument("--cd-iter", type=int, default=0, help="optional FLK coordinate-descent iterations after GLKM")
+    parser.add_argument("--kpp-init", action="store_true", help="run only KPP+GLKM unless --compare-raw is also set")
+    parser.add_argument("--kpp-factor", type=float, default=4.0)
+    parser.add_argument("--kpp-random-state", type=int, default=0)
+    parser.add_argument("--kpp-n-init", type=int, default=1)
+    parser.add_argument("--compare-raw", action="store_true", help="write both raw GLKM and KPP+GLKM rows")
     parser.add_argument("--out-dir", default="results/elbow")
     args = parser.parse_args()
 
     X, y_true, NN, NND, knn_time = load_dataset(args.data_dir, args.dataset, args.knn)
     rows = []
     for c in args.c_values:
-        print(f"running c={c} ...", flush=True)
-        row = run_once(NN, NND, y_true, c, args.cd_iter)
-        rows.append(row)
-        print(
-            f"c={row['c']} loss={row['gkm_loss']:.6g} "
-            f"nmi={row['nmi']:.3f} acc={row['acc']:.3f} "
-            f"time={row['total_elapsed_sec']:.2f}s",
-            flush=True,
-        )
+        run_raw = args.compare_raw or not args.kpp_init
+        run_kpp = args.compare_raw or args.kpp_init
+
+        if run_raw:
+            print(f"running raw c={c} ...", flush=True)
+            row = run_once(NN, NND, y_true, c, args.cd_iter)
+            row["method"] = "raw"
+            row["kpp_factor"] = ""
+            row["kpp_start_clusters"] = ""
+            rows.append(row)
+            print(
+                f"raw c={row['c']} loss={row['gkm_loss']:.6g} "
+                f"nmi={row['nmi']:.3f} acc={row['acc']:.3f} "
+                f"time={row['total_elapsed_sec']:.2f}s",
+                flush=True,
+            )
+
+        if run_kpp:
+            print(f"running kpp+glkm c={c} ...", flush=True)
+            init_t0 = time.perf_counter()
+            init_labels = kpp_warm_start_labels(
+                X,
+                c_true=c,
+                factor=args.kpp_factor,
+                random_state=args.kpp_random_state,
+                n_init=args.kpp_n_init,
+            )
+            init_seconds = time.perf_counter() - init_t0
+            row = run_once(
+                NN,
+                NND,
+                y_true,
+                c,
+                args.cd_iter,
+                init_labels=init_labels,
+                init_seconds=init_seconds,
+            )
+            row["method"] = "kpp+glkm"
+            row["kpp_factor"] = float(args.kpp_factor)
+            row["kpp_start_clusters"] = warm_start_cluster_count(c, len(X), factor=args.kpp_factor)
+            rows.append(row)
+            print(
+                f"kpp+glkm c={row['c']} loss={row['gkm_loss']:.6g} "
+                f"nmi={row['nmi']:.3f} acc={row['acc']:.3f} "
+                f"time={row['total_elapsed_sec']:.2f}s",
+                flush=True,
+            )
 
     out_dir = Path(args.out_dir) / args.dataset
     csv_path = out_dir / "sweep_c.csv"

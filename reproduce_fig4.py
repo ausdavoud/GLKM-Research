@@ -14,6 +14,7 @@ from sklearn.neighbors import NearestNeighbors
 from GKM import GKM
 from LKM.FLK import FLK
 from FeiPub import Gfuns, IFuns
+from FeiPub.kpp import kpp_warm_start_labels
 
 
 PALETTE = [
@@ -229,7 +230,27 @@ def run_glkm(NN, NND, c, cd_iter):
     return relabel(mod.Y[0])
 
 
-def run_all_methods(X, y_true, knn, seed, cd_iter, gk_iter):
+def run_glkm_kpp(X, NN, NND, c, cd_iter, factor, seed, n_init):
+    init_labels = kpp_warm_start_labels(
+        X,
+        c_true=int(c),
+        factor=factor,
+        random_state=seed,
+        n_init=n_init,
+    )
+    obj = GKM(NN=NN, NND=NND, c_true=int(c), debug=0, init_labels=init_labels)
+    obj.opt()
+    y = obj.y_pred.astype(np.int32)
+    if cd_iter <= 0:
+        return relabel(y)
+
+    mod = FLK(NN=NN, NND=NND, max_d=-1, c_true=int(c), debug=False)
+    init_y = np.asarray(IFuns.replace_with_continuous(y), dtype=np.int32)
+    mod.opt(ITER=cd_iter, init_Y=[init_y])
+    return relabel(mod.Y[0])
+
+
+def run_all_methods(X, y_true, knn, seed, cd_iter, gk_iter, kpp_init, kpp_factor, kpp_n_init):
     c = int(len(np.unique(y_true)))
     NN, NND = build_knn(X, knn)
     methods = []
@@ -249,6 +270,13 @@ def run_all_methods(X, y_true, knn, seed, cd_iter, gk_iter):
 
     t0 = time.perf_counter()
     methods.append(("GLKM", run_glkm(NN, NND, c, cd_iter), time.perf_counter() - t0))
+    if kpp_init:
+        t0 = time.perf_counter()
+        methods.append((
+            f"KPP+GLKM ({kpp_factor:g}k)",
+            run_glkm_kpp(X, NN, NND, c, cd_iter, kpp_factor, seed, kpp_n_init),
+            time.perf_counter() - t0,
+        ))
     return methods
 
 
@@ -305,7 +333,7 @@ def write_svg(results, path):
     left = 28
     top = 38
     label_h = 26
-    cols = 5
+    cols = max(len(item["methods"]) for item in results)
     rows = len(results)
     width = left * 2 + cols * panel_w + (cols - 1) * gap_x
     height = top + rows * (panel_h + label_h) + (rows - 1) * gap_y + 42
@@ -341,7 +369,7 @@ def write_svg(results, path):
 
     parts.append(
         f'<text class="caption" x="{width / 2:.1f}" y="{height - 16}" text-anchor="middle">'
-        "Fig. 4. Visualization of 5 toy datasets with NMI score for each algorithm."
+        "Fig. 4. Visualization of toy datasets with NMI score for each algorithm."
         "</text>"
     )
     parts.append("</svg>")
@@ -365,6 +393,9 @@ def main():
     parser.add_argument("--knn", type=int, default=20)
     parser.add_argument("--cd-iter", type=int, default=100, help="FLK refinement iterations after GLKM")
     parser.add_argument("--gk-iter", type=int, default=100, help="FLK iterations for the local GK-means approximation")
+    parser.add_argument("--kpp-init", action="store_true", help="include KPP+GLKM in the comparison")
+    parser.add_argument("--kpp-factor", type=float, default=4.0)
+    parser.add_argument("--kpp-n-init", type=int, default=1)
     args = parser.parse_args()
 
     figure_rows = []
@@ -373,7 +404,17 @@ def main():
         c_true = len(np.unique(y_true))
         effective_knn = suggested_knn(X, c_true, args.knn)
         print(f"dataset={dataset_name} n={len(X)} c={c_true} knn={effective_knn}", flush=True)
-        methods = run_all_methods(X, y_true, effective_knn, args.seed, args.cd_iter, args.gk_iter)
+        methods = run_all_methods(
+            X,
+            y_true,
+            effective_knn,
+            args.seed,
+            args.cd_iter,
+            args.gk_iter,
+            args.kpp_init,
+            args.kpp_factor,
+            args.kpp_n_init,
+        )
 
         scored_methods = []
         for method_name, labels, seconds in methods:
